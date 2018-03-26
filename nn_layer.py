@@ -118,3 +118,21 @@ class MaxoutNetwork(nn.Module):
         for _, layer in enumerate(layer_list, start=1):
             max_output = torch.max(max_output, layer(x))
         return max_output
+
+
+class WE_Selector(nn.Module):
+    # selector selects the important words by probability output tensor
+    def __init__(self, emsize, dropout, num_labels=1):
+        super(WE_Selector, self).__init__()
+        self.linear= nn.Linear(emsize, num_labels)
+    
+
+    #input (x) : (batch x sentence len x em_size)
+    #output (x) : (batch x sentence len)
+    def forward(self, x):
+        score = self.linear(x).squeeze(2)
+        # return pbz, f.log_softmax(score, dim=2)
+        return f.sigmoid(score)
+
+        
+        

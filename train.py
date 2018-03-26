@@ -103,7 +103,39 @@ class Train:
             n_correct = (torch.max(score, 1)[1].view(train_labels.size()).data == train_labels.data).sum()
             # print (' score size ', score.size(), train_labels.size())
             loss = self.criterion(score, train_labels)
-            # Important if we are using nn.DataParallel()
+
+
+            ############################ custom new_loss ############################
+
+            # z2 = z_pred.dimshuffle((0,1,"x"))
+            # logpz = - T.nnet.binary_crossentropy(probs, z2) * masks
+            # logpz = self.logpz = logpz.reshape(x.shape)
+            # probs = self.probs = probs.reshape(x.shape)
+
+            # # batch
+            # z = z_pred
+            # self.zsum = T.sum(z, axis=0, dtype=theano.config.floatX)
+            # self.zdiff = T.sum(T.abs_(z[1:]-z[:-1]), axis=0, dtype=theano.config.floatX)
+
+            # zsum = generator.zsum
+            # zdiff = generator.zdiff
+            # logpz = generator.logpz
+
+            # coherent_factor = args.sparsity * args.coherent
+            # loss = self.loss = T.mean(loss_vec) #this is not needed as in cost_vec loss_vec is used
+            # sparsity_cost = self.sparsity_cost = T.mean(zsum) * args.sparsity + \
+            #                                      T.mean(zdiff) * coherent_factor
+            # cost_vec = loss_vec + zsum * args.sparsity + zdiff * coherent_factor
+            # cost_logpz = T.mean(cost_vec * T.sum(logpz, axis=0))
+            # self.obj = T.mean(cost_vec)
+
+            ############################ custom new_loss ############################
+
+
+
+
+
+
             if loss.size(0) > 1:
                 loss = loss.mean()
             loss.backward()

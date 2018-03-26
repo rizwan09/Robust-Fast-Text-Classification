@@ -62,10 +62,17 @@ print('development set size = ', len(dev_corpus.data))
 print('test set size = ', len(test_corpus.data))
 
 
-dictionary = data.Dictionary()
-dictionary.build_dict(train_corpus.data + dev_corpus.data + test_corpus.data, args.max_words)
 # save the dictionary object to use during testing
-helper.save_object(dictionary, args.save_path + 'dictionary.p')
+if os.path.exists(args.save_path + 'dictionary.p'):
+    print('loading dictionary')
+    dictionary = helper.load_object(args.save_path + 'dictionary.p') 
+else:
+    dictionary = data.Dictionary()
+    dictionary.build_dict(train_corpus.data + dev_corpus.data + test_corpus.data, args.max_words)
+    helper.save_object(dictionary, args.save_path + 'dictionary.p')
+
+
+    
 print('vocabulary size = ', len(dictionary))
 
 embeddings_index = helper.load_word_embeddings(args.word_vectors_directory, args.word_vectors_file, dictionary.word2idx)

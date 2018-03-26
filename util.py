@@ -53,9 +53,13 @@ def get_args():
                         help='initial learning rate')
     parser.add_argument('--max_norm', type=float, default=5.0,
                         help='gradient clipping')
+    parser.add_argument('--sparsity', type=float, default=0.5,
+                        help='sparsity')
+    parser.add_argument('--coherent', type=float, default=2.0,
+                        help='coherent')
     parser.add_argument('--epochs', type=int, default=20,
                         help='upper limit of epoch')
-    parser.add_argument('--early_stop', type=int, default=5,
+    parser.add_argument('--early_stop', type=int, default=3,
                         help='early stopping criterion')
     parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
                         help='manual epoch number (useful on restarts)')
@@ -71,6 +75,12 @@ def get_args():
                         help='random seed for reproducibility')
     parser.add_argument('--cuda', action='store_false',
                         help='use CUDA for computation')
+    parser.add_argument('--SAG', action='store_true',
+                        help='Full enc type of classifier')
+    parser.add_argument('--WAG', action='store_true',
+                        help='Full enc type of classifier')
+    parser.add_argument('--debug', action='store_true',
+                        help='in debug mode or not')
     parser.add_argument('--print_every', type=int, default=100,
                         help='training report interval')
     parser.add_argument('--plot_every', type=int, default=100,
@@ -83,6 +93,12 @@ def get_args():
                         help='GloVe word embedding file name')
     parser.add_argument('--word_vectors_directory', type=str, default='../glove/',
                         help='Path of GloVe word embeddings')
+    parser.add_argument('--load_classifier', type=str, default='../bcn_output/IMDB/full_ori.pth.tar',
+                        help='Path of GloVe word embeddings')
+    parser.add_argument('--load_selector', type=str, default='../bcn_output/IMDB/full_ori.pth.tar',
+                        help='Path of GloVe word embeddings')
+    parser.add_argument('--full_enc', type=int, default=1,
+                        help='is to test with loading with full enc model')
 
     args = parser.parse_args()
     return args

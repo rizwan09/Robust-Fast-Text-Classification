@@ -6,7 +6,7 @@
 # File Description: This script tests classification accuracy.
 ###############################################################################
 
-import torch, helper, util, os, numpy, data
+import torch, helper, util, os, numpy, data, time
 from model import BCN
 from sklearn.metrics import f1_score
 
@@ -22,6 +22,10 @@ def evaluate(model, batches, dictionary, outfile=None):
 
     n_correct, n_total = 0, 0
     y_preds, y_true, output = [], [], []
+    start = time.time()
+    num_batches = len(batches)
+
+
     for batch_no in range(len(batches)):
         test_sentences1, sent_len1, test_sentences2, sent_len2, test_labels = helper.batch_to_tensors(batches[batch_no],
                                                                                                       dictionary, True)
@@ -43,6 +47,16 @@ def evaluate(model, batches, dictionary, outfile=None):
             n_correct += (preds.view(test_labels.size()).data == test_labels.data).sum()
             n_total += len(batches[batch_no])
 
+        if (batch_no+1) % args.print_every == 0:
+            print_acc_avg = 100. * n_correct / n_total
+            print('%s (%d %d%%) %.2f' % (
+                helper.show_progress(start, (batch_no+1) / num_batches), (batch_no+1),
+                (batch_no+1) / num_batches * 100, print_acc_avg))
+
+
+    now = time.time()
+    s = now - start
+
     if outfile:
         target_names = ['entailment', 'neutral', 'contradiction']
         with open(outfile, 'w') as f:
@@ -51,18 +65,28 @@ def evaluate(model, batches, dictionary, outfile=None):
                 f.write(str(item[0]) + ',' + target_names[item[1]] + '\n')
     else:
         return 100. * n_correct / n_total, 100. * f1_score(numpy.asarray(y_true), numpy.asarray(y_preds),
-                                                           average='weighted')
+                                                           average='weighted'), s
 
 
 if __name__ == "__main__":
-    dictionary = helper.load_object(args.save_path + 'dictionary.p')
+    dict_path = model_path = args.save_path 
+    if args.full_text: 
+        dict_path+=args.task+'/'
+        model_path += args.task+'/'
+    dict_path += 'dictionary.p'
+    model_path += 'model_best.pth.tar'
+
+    if args.full_enc:
+        model_path = args.load_classifier
+    
+    dictionary = helper.load_object(dict_path)
     embeddings_index = helper.load_word_embeddings(args.word_vectors_directory, args.word_vectors_file,
                                                    dictionary.word2idx)
     model = BCN(dictionary, embeddings_index, args)
     if args.cuda:
         torch.cuda.set_device(args.gpu)
         model = model.cuda()
-    helper.load_model_states_from_checkpoint(model, args.save_path + 'model_best.pth.tar', 'state_dict', args.cuda)
+    helper.load_model_states_from_checkpoint(model, model_path, 'state_dict', args.cuda)
     print('vocabulary size = ', len(dictionary))
 
     task_names = ['snli', 'multinli'] if args.task == 'allnli' else [args.task]
@@ -90,6 +114,8 @@ if __name__ == "__main__":
             test_corpus.parse(args.data + task + '/' + args.test + '.txt', task, args.max_example)
         print('dataset size = ', len(test_corpus.data))
         test_batches = helper.batchify(test_corpus.data, args.batch_size)
-        test_accuracy, test_f1 = evaluate(model, test_batches, dictionary)
+        test_accuracy, test_f1, test_time = evaluate(model, test_batches, dictionary)
         print('accuracy: %.2f%%' % test_accuracy)
         print('f1: %.2f%%' % test_f1)
+        print ('test time ', helper.convert_to_minutes(test_time))
+

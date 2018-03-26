@@ -7,24 +7,23 @@
 # may come in handy at any point in the experiments.
 ###############################################################################
 
-<<<<<<< HEAD
 import re, os, glob, pickle, inspect, math, time, torch, util
-=======
-import re, os, glob, pickle, inspect, math, time, torch, util, json
->>>>>>> f01bdf097e96094f8e5112f58748b1dd7dbea610
 import numpy as np
 from torch import optim
 from nltk import word_tokenize
 from collections import OrderedDict
 from torch.autograd import Variable
 import matplotlib as mpl
+import torch.nn.functional as f
+
+
 
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
 args = util.get_args()
-
+np.random.seed(args.seed)
 
 def load_word_embeddings(directory, file, dictionary):
     embeddings_index = {}
@@ -59,11 +58,7 @@ def save_checkpoint(state, filename='./checkpoint.pth.tar'):
     torch.save(state, filename)
 
 
-<<<<<<< HEAD
 def get_optimizer(s):
-=======
-def get_optimizer(s, verbose = 0):
->>>>>>> f01bdf097e96094f8e5112f58748b1dd7dbea610
     """
     Parse optimizer parameters.
     Input should be of the form:
@@ -82,12 +77,6 @@ def get_optimizer(s, verbose = 0):
         method = s
         optim_params = {}
 
-<<<<<<< HEAD
-=======
-    if verbose: 
-        print (' method: ', method, ' optim_params: ', optim_params)
-
->>>>>>> f01bdf097e96094f8e5112f58748b1dd7dbea610
     if method == 'adadelta':
         optim_fn = optim.Adadelta
     elif method == 'adagrad':
@@ -122,6 +111,18 @@ def load_model_states_from_checkpoint(model, filename, tag, from_gpu=True):
     model.load_state_dict(checkpoint[tag])
 
 
+def load_selector_classifier_states_from_checkpoint(selector, tag_selector, model, filename, tag, from_gpu=True):
+    """Load model states from a previously saved checkpoint."""
+    assert os.path.exists(filename)
+    if from_gpu:
+        checkpoint = torch.load(filename)
+    else:
+        checkpoint = torch.load(filename, map_location=lambda storage, loc: storage)
+    selector.load_state_dict(checkpoint[tag_selector])
+    model.load_state_dict(checkpoint[tag])
+
+
+
 def load_model_states_without_dataparallel(model, filename, tag):
     """Load a previously saved model states."""
     assert os.path.exists(filename)
@@ -152,6 +153,18 @@ def count_parameters(model):
         if param.requires_grad:
             param_dict[name] = np.prod(param.size())
     return param_dict
+
+
+def print_trainable_model_params(model, how_many=-1):
+    c=0
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            # if how_many and param.size()[0]>how_many: 
+            print(name,param.size(), param)
+            # else:
+            #     print(name,param.size(), param)
+            c+=1
+            if how_many>0 and c>how_many: break
 
 
 def tokenize(s, tokenize):
@@ -232,9 +245,7 @@ def sequence_to_tensor(sequence, max_sent_length, dictionary):
             sen_rep[i] = dictionary.word2idx[sequence[i]]
     return sen_rep
 
-
-def batch_to_tensors(batch, dictionary, iseval=False):
-    """Convert a list of sequences to a list of tensors."""
+def get_max_length(batch):
     max_sent_length1, max_sent_length2 = 0, 0
     for item in batch:
         if max_sent_length1 < len(item.sentence1):
@@ -242,6 +253,13 @@ def batch_to_tensors(batch, dictionary, iseval=False):
         if max_sent_length2 < len(item.sentence2):
             max_sent_length2 = len(item.sentence2)
 
+    return max_sent_length1, max_sent_length2
+
+
+def batch_to_tensors(batch, dictionary, iseval=False):
+    """Convert a list of sequences to a list of tensors."""
+    max_sent_length1, max_sent_length2 = get_max_length(batch)
+    
     all_sentences1 = torch.LongTensor(len(batch), max_sent_length1)
     sent_len1 = np.zeros(len(batch), dtype=np.int)
     all_sentences2 = torch.LongTensor(len(batch), max_sent_length2)
@@ -260,7 +278,22 @@ def batch_to_tensors(batch, dictionary, iseval=False):
         return Variable(all_sentences1), sent_len1, Variable(all_sentences2), sent_len2, Variable(labels)
 
 
-def get_splited_imdb_data(file_name, data_name='IMDB'):
+
+def get_selected_variable(embedded_x, selection_x, cuda):
+    # embedded_x (batch x sentence len x emsize)
+    # selection_x (batch x sentence len)
+    # output:  (batch x max sentence len in selection_x x emsize)
+    r = torch.FloatTensor(embedded_x.size(0), int(selection_x.sum(0).max()), embedded_x.size(2)).zero_()
+    
+    for i in range(embedded_x.size(0)):
+        for j in range(embedded_x.size(1)):
+            if int(selection_x_list[i][j])==1: r[i][j]= embedded_x_list[i][j].data
+    rt = Variable(torch.Tensor(r))
+    if cuda: rt = rt.cuda()
+    return rt
+
+
+def get_splited_imdb_data(file_name, data_name='IMDB', SAG=False):
     if data_name=='IMDB':
         train_d =[]
         dev_d =[]
@@ -269,11 +302,42 @@ def get_splited_imdb_data(file_name, data_name='IMDB'):
             x = pickle.load(f, encoding="latin1")
             all_d = x[0]
             for line in all_d:
-                if line['split']==0: train_d.append(line)
+                if line['split']==0: 
+                    train_d.append(line)
+                    # if SAG:
+                        
                 elif line['split']==1: dev_d.append(line)
                 else: test_d.append(line)
         return train_d, dev_d, test_d
-<<<<<<< HEAD
-=======
 
->>>>>>> f01bdf097e96094f8e5112f58748b1dd7dbea610
+
+
+def get_selected_tensor(result_x, pbx, sentence1, sentence1_len_old, cuda):
+    sentences = []
+    sent_len =  np.zeros(result_x.size()[0], dtype=np.int)
+    for i,s in enumerate(result_x):
+        s = s[:sentence1_len_old[i]] #discard padded portion first
+        sn = s[(s!=0).detach()] #non_zero elements
+        #make sure that atleast one word is selected
+        while sn.dim()==0:
+            pb = pbx[i,:sentence1_len_old[i]]
+            s = sentence1[i,:sentence1_len_old[i]].mul(pb.bernoulli().long())
+            sn = s[(s!=0).detach()] #non_zero elements
+             
+        sentences.append(sn)
+        sent_len[i] = sn.size()[0]
+    max_sent_length = max(sent_len)
+    sentences_tensor = torch.LongTensor(result_x.size()[0], int(max_sent_length)).zero_()
+    for i in range(result_x.size()[0]):
+        sentences_tensor[i,:sent_len[i]] = sentences[i].data
+    sent_var = Variable(sentences_tensor)
+    if cuda: sent_var = sent_var.cuda()
+    return sent_var, sent_len
+
+def binary_cross_entropy(pbx, targets, size_average = True, reduce = False):
+    if reduce==True:
+        return f.binary_cross_entropy(pbx, targets, size_average = size_average)
+    else:
+        return  -(targets*torch.log(pbx)+ (1-targets)*torch.log(1-pbx))
+
+    
