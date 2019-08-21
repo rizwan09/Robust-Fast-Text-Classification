@@ -1,8 +1,6 @@
 ###############################################################################
-# Author: Wasi Ahmad
-# Project: Biattentive Classification Network for Sentence Classification
+# Author: Md Rizwan Parvez, code adapted from Wasi Uddin ahmad
 # Date Created: 01/06/2018
-#
 # File Description: This script is the entry point of the entire pipeline.
 ###############################################################################
 
