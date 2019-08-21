@@ -1,7 +1,7 @@
 import os
 
 
-gpu = 0
+gpu = 2
 task = 'IMDB'
 
 dropout = [0.2]
@@ -9,20 +9,20 @@ dropout = [0.2]
 write_to_file = 0
 resume=0
 # max_example = 10000
-save_selection = 1
-full_classifier = 0
+save_selection = 0
+full_classifier = 1
 
 pyfile = 'imdb_main.py'
 
 # pyfile = 'imdb_test.py'
 
-sparsity_list = [0.0001]#[0.0002, 0.00025, 0.0003]#, 0.0005] # [0.5 , 0.05, 0.02, 0.015, 0.01, 0.001, 0.00075,  0.0005, 0.00025, 0.0001]
-coherent_list = [2.0]#[1.0, 2.0]
+sparsity_list = [0] # [0.5 , 0.05, 0.02, 0.015, 0.01, 0.001, 0.00075,  0.0005, 0.00025, 0.0001]
+coherent_list = [0]
 debug=0
 
 SAG = 0
 WAG = 1
-load_model = 2# -1 for no load,  0 for load selector only, 1 for load classifier only
+load_model = 1# -1 for no load,  0 for load selector only, 1 for load classifier only
 classifier_file_name = 'full_ori.pth.tar'
 
 
@@ -42,9 +42,8 @@ for dp in dropout:
 					pyfile = 'imdb_main_WAG_full_classifier.py'
 					model_file_name = 'full_WAG_classifier_nlp'+'.pth.tar'
 				else:
-					# classifier_file_name = 'full_WAG_classifier_nlp'+'.pth.tar'#'full_WAG_classifier_nlp'+'.pth.tar'
-					# options+=' --classifier_file_name '+classifier_file_name
-					model_file_name = 'WAG_'+model_file_name
+					classifier_file_name = 'full_WAG_classifier_nlp'+'.pth.tar'
+					options+=' --classifier_file_name '+classifier_file_name
 				options+= ' --WAG '
 			elif SAG==1: 
 				if full_classifier ==1: 
@@ -53,7 +52,6 @@ for dp in dropout:
 				else:
 					classifier_file_name = 'full_SAG_classifier_nlp'+'.pth.tar'
 					options+=' --classifier_file_name '+classifier_file_name
-					model_file_name += '_SAG'
 				options+= ' --SAG '
 			
 
@@ -63,14 +61,13 @@ for dp in dropout:
 			
 			
 
-			if save_selection==1 or pyfile == 'imdb_test.py': 
-				# model_file_name = 'modle_sparsity_'+str(sparsity)+'_coherent_'+str(coherent)+'.pth.tar'
+			if save_selection==1: 
+				model_file_name = 'modle_sparsity_'+str(sparsity)+'_coherent_'+str(coherent)+'.pth.tar'
 				classifier_file_name = model_file_name
 				selector_file_name =  model_file_name
 				options+= ' --save_selection '+ str(save_selection) +' --batch_size 32'
 			if debug==1:options+= ' --debug '
 			if load_model>0:options+=' --classifier_file_name '+classifier_file_name
-			if load_model>1:options+=' --selector_file_name '+selector_file_name
 			run_command = ' python3 '+pyfile+' --gpu '+str(gpu)+options
 
 			if resume==1: run_command+=' --resume '+model_file_name

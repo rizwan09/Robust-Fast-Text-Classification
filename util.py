@@ -57,9 +57,9 @@ def get_args():
                         help='sparsity')
     parser.add_argument('--coherent', type=float, default=2.0,
                         help='coherent')
-    parser.add_argument('--epochs', type=int, default=20,
+    parser.add_argument('--epochs', type=int, default=5,
                         help='upper limit of epoch')
-    parser.add_argument('--early_stop', type=int, default=3,
+    parser.add_argument('--early_stop', type=int, default=5,
                         help='early stopping criterion')
     parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
                         help='manual epoch number (useful on restarts)')
@@ -67,7 +67,7 @@ def get_args():
                         help='batch size')
     parser.add_argument('--gpu', type=int, default=2, metavar='N',
                         help='gpu index')
-    parser.add_argument('--eval_batch_size', type=int, default=256, metavar='N',
+    parser.add_argument('--eval_batch_size', type=int, default=32, metavar='N',
                         help='batch size')
     parser.add_argument('--dropout', type=float, default=0.2,
                         help='dropout applied to layers (0 = no dropout)')
@@ -87,18 +87,34 @@ def get_args():
                         help='plotting interval')
     parser.add_argument('--resume', default='', type=str, metavar='PATH',
                         help='resume from last checkpoint (default: none)')
-    parser.add_argument('--save_path', type=str, default='../bcn_output/',
+    parser.add_argument('--output_base_path', type=str, default='../bcn_output/',
                         help='path to save the final model')
     parser.add_argument('--word_vectors_file', type=str, default='glove.6B.300d.txt',
                         help='GloVe word embedding file name')
     parser.add_argument('--word_vectors_directory', type=str, default='../glove/',
                         help='Path of GloVe word embeddings')
-    parser.add_argument('--load_classifier', type=str, default='../bcn_output/IMDB/full_ori.pth.tar',
+    parser.add_argument('--classifier_file_name', type=str, default='dummy_classifier.pth.tar',
                         help='Path of GloVe word embeddings')
-    parser.add_argument('--load_selector', type=str, default='../bcn_output/IMDB/full_ori.pth.tar',
+    parser.add_argument('--selector_file_name', type=str, default='dummy_selector.pth.tar',
                         help='Path of GloVe word embeddings')
-    parser.add_argument('--full_enc', type=int, default=1,
+    parser.add_argument('--model_file_name', type=str, default='dummy_model.pth.tar',
+                        help='Path of GloVe word embeddings')
+    parser.add_argument('--full_enc', type=int, default=0,
                         help='is to test with loading with full enc model')
+    parser.add_argument('--nversion', type=int, default=5,
+                        help='number of blankout versions for SAG')
+    parser.add_argument('--blankout_prob', type=float, default=0.4,
+                        help='probability of blankingout a sentence')
+    parser.add_argument('--variation', type=int, default=4,
+                        help='number of vaersions for WAG')
+    parser.add_argument('--selected_batch_size', type=int, default=7,
+                        help='number of vaersions for WAG')
+    parser.add_argument('--save_selection', type=int, default=0,
+                        help='just load selector, classifier (not actually needed) and save the train selection: preprocess fo WAG')
+    parser.add_argument('--load_model', type=int, default=-1,
+                        help='-1 for not loading any, 0 for loading selector, 1 for loading classifier, 2 for loading both selector and classifier')
+    parser.add_argument('--c', type=float, default=1.0,
+                        help='c for L1')
 
     args = parser.parse_args()
     return args

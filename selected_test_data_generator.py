@@ -2,7 +2,7 @@ import os
 
 
 gpu = 0
-task = 'IMDB'
+task = 'yelp'
 
 dropout = [0.2]
 
@@ -14,15 +14,15 @@ full_classifier = 0
 
 pyfile = 'imdb_main.py'
 
-# pyfile = 'imdb_test.py'
 
-sparsity_list = [0.0001]#[0.0002, 0.00025, 0.0003]#, 0.0005] # [0.5 , 0.05, 0.02, 0.015, 0.01, 0.001, 0.00075,  0.0005, 0.00025, 0.0001]
-coherent_list = [2.0]#[1.0, 2.0]
+
+sparsity_list = [5e-05]#[0.0002, 0.00025, 0.0003]#, 0.0005] # [0.5 , 0.05, 0.02, 0.015, 0.01, 0.001, 0.00075,  0.0005, 0.00025, 0.0001]
+coherent_list = [8.5]#[1.0, 2.0]
 debug=0
 
 SAG = 0
 WAG = 1
-load_model = 2# -1 for no load,  0 for load selector only, 1 for load classifier only
+load_model = 0# -1 for no load,  0 for load selector only, 1 for load classifier only
 classifier_file_name = 'full_ori.pth.tar'
 
 
@@ -69,8 +69,9 @@ for dp in dropout:
 				selector_file_name =  model_file_name
 				options+= ' --save_selection '+ str(save_selection) +' --batch_size 32'
 			if debug==1:options+= ' --debug '
-			if load_model>0:options+=' --classifier_file_name '+classifier_file_name
-			if load_model>1:options+=' --selector_file_name '+selector_file_name
+			
+			options+=' --selector_file_name '+selector_file_name +' --task '+task + ' --data ../bcn_output/'
+			
 			run_command = ' python3 '+pyfile+' --gpu '+str(gpu)+options
 
 			if resume==1: run_command+=' --resume '+model_file_name
@@ -78,6 +79,8 @@ for dp in dropout:
 
 			if 'test' not in pyfile and write_to_file ==1:run_command += ' >> ../bcn_output/' + task+'/'+model_file_name+'_output.txt'
 			print (run_command)
+			os.system('rm -r ../bcn_output/'+task+'/selected')
+			os.system('mkdir ../bcn_output/'+task+'/selected')
 			os.system(run_command)
 			# exit()
 

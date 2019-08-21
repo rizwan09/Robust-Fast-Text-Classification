@@ -8,7 +8,8 @@
 
 
 import util, helper, data, os, sys, numpy, torch, pickle, json
-import imdb_train as train
+import imdb_train_WAG_full_classifier as train
+
 from torch import optim
 from model import BCN
 from selector_model import Selector
@@ -18,6 +19,10 @@ args = util.get_args()
 # if output directory doesn't exist, create it
 if not os.path.exists(args.output_base_path):
     os.makedirs(args.output_base_path)
+
+
+### selected versions
+
 
 # Set the random seed manually for reproducibility.
 numpy.random.seed(args.seed)
@@ -47,15 +52,12 @@ for task in task_names:
         # Load Learning to Skim paper's Pickle file
         ###############################################################################
         train_d, dev_d, test_d = helper.get_splited_imdb_data(args.output_base_path+task+'/'+'imdb.p', SAG = args.SAG)
-        
-        # train_corpus.parse(train_d, task, args.max_example)
-        #only for save selection on test set:
-        train_corpus.parse(test_d, task, args.max_example)
-
+        train_corpus.parse(train_d, task, args.max_example)
         dev_corpus.parse(dev_d, task, args.max_example)
         test_corpus.parse(test_d, task, args.max_example)
+
     else:
-        train_corpus.parse(args.data + task + '/test.txt', task, args.max_example)
+        train_corpus.parse(args.data + task + '/train.txt', task, args.max_example)
         if task == 'multinli':
             dev_corpus.parse(args.data + task + '/dev_matched.txt', task, args.tokenize)
             test_corpus.parse(args.data + task + '/test_matched.txt', task, args.tokenize)
@@ -66,14 +68,14 @@ for task in task_names:
 
 
 if args.debug:
-	threshold_examples = 20
-	mid_train = int(len(train_corpus.data)/2)
-	mid_dev = int(len(dev_corpus.data)/2)
-	mid_test = int(len(test_corpus.data)/2)
-	train_corpus.data = train_corpus.data[mid_train-threshold_examples:mid_train+threshold_examples]
-	dev_corpus.data = dev_corpus.data[mid_dev-threshold_examples:mid_dev+threshold_examples]
-	test_corpus.data = test_corpus.data[mid_test-threshold_examples:mid_test+threshold_examples]
-
+    print(' previous: data size: ',len(train_corpus.data))
+    threshold_examples = 20
+    mid_train = int(len(train_corpus.data)/2)
+    mid_dev = int(len(dev_corpus.data)/2)
+    mid_test = int(len(test_corpus.data)/2)
+    train_corpus.data = train_corpus.data[mid_train-threshold_examples:mid_train+threshold_examples]
+    dev_corpus.data = dev_corpus.data[mid_dev-threshold_examples:mid_dev+threshold_examples]
+    test_corpus.data = test_corpus.data[mid_test-threshold_examples:mid_test+threshold_examples]
 
 
 print('train set size = ', len(train_corpus.data))
@@ -88,7 +90,7 @@ if os.path.exists(args.output_base_path + args.task+'/'+'dictionary.p'):
 else:
     dictionary = data.Dictionary()
     dictionary.build_dict(train_corpus.data + dev_corpus.data + test_corpus.data, args.max_words)
-    helper.save_object(dictionary, args.output_base_path + args.task+'/' + 'dictionary.p')
+    helper.save_object(dictionary, args.output_base_path + args.task+'/'+ 'dictionary.p')
 
 
     
@@ -124,7 +126,7 @@ if args.cuda:
 
 if args.load_model == 0 or args.load_model==2:
     print('loading selector')
-    helper.load_model(selector, args.output_base_path+args.task+'/'+ args.selector_file_name, 'selector', args.cuda)
+    helper.load_model(selector, args.output_base_path+args.task+'/'+args.selector_file_name, 'selector', args.cuda)
 if args.load_model == 1 or args.load_model==2:
     print('loading classifier')
     helper.load_model(model, args.output_base_path+args.task+'/'+args.classifier_file_name, 'state_dict', args.cuda)
@@ -149,6 +151,7 @@ if args.resume:
 # # Train the model
 # ###############################################################################
 
-train = train.Train(model, optimizer, selector, optimizer_selector, dictionary, args, best_acc)
+# train = train.Train(model, optimizer, selector, optimizer_selector, dictionary, args, best_acc)
+train = train.Train(model, optimizer, dictionary, args, best_acc)
 train.train_epochs(train_corpus, dev_corpus, test_corpus, args.start_epoch, args.epochs)
 

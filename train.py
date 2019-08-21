@@ -38,23 +38,45 @@ class Train:
                     if epoch > start_epoch and 'sgd' in self.config.optimizer else self.optimizer.param_groups[0]['lr']
                 if 'sgd' in self.config.optimizer:
                     print('Learning rate : {0}'.format(self.optimizer.param_groups[0]['lr']))
-                self.train(train_corpus)
+                try:
+                    self.train(train_corpus, epoch+1)
+                except KeyboardInterrupt:
+                    print('-' * 89)
+                    print('Exiting from training early')
                 # training epoch completes, now do validation
                 print('\nVALIDATING : Epoch ' + str((epoch + 1)))
-                dev_acc = self.validate(dev_corpus)
-                self.dev_accuracies.append(dev_acc)
-                print('validation acc = %.2f%%' % dev_acc)
-                test_acc = self.validate(test_corpus)
-                print('validation acc = %.2f%%' % test_acc)
+                dev_acc = -1
+                try:
+                    dev_acc = self.validate(dev_corpus)
+                    self.dev_accuracies.append(dev_acc)
+                    print('validation acc = %.2f%%' % dev_acc)
+                except KeyboardInterrupt:
+                    print('-' * 89)
+                    print('Exiting from dev early')
+                
+            
+                try:
+                    test_acc = self.validate(test_corpus)
+                    print('validation acc = %.2f%%' % test_acc)
+                except KeyboardInterrupt:
+                    print('-' * 89)
+                    print('Exiting from testing early')
+                
+    
                 # save model if dev accuracy goes up
-                if self.best_dev_acc < dev_acc:
+                if self.best_dev_acc < dev_acc and dev_acc!=-1:
                     self.best_dev_acc = dev_acc
+                    file_path = self.config.output_base_path+self.config.task+'/'+self.config.model_file_name
+                    if file_path.endswith('.pth.tar')==False:
+                        file_path += 'model_best.pth.tar'
+
                     helper.save_checkpoint({
                         'epoch': (epoch + 1),
                         'state_dict': self.model.state_dict(),
                         'best_acc': self.best_dev_acc,
-                        'optimizer': self.optimizer.state_dict(),
-                    }, self.config.save_path + 'model_best.pth.tar')
+                        'optimizer': self.optimizer.state_dict() 
+                    }, file_path)
+                    print('model saved as: ', file_path)
                     self.times_no_improvement = 0
                 else:
                     if 'sgd' in self.config.optimizer:
@@ -69,17 +91,21 @@ class Train:
                         if self.times_no_improvement == self.config.early_stop:
                             self.stop = True
                 # save the train loss and development accuracy plot
-                helper.save_plot(self.train_accuracies, self.config.save_path, 'training_acc_plot_', epoch + 1)
-                helper.save_plot(self.dev_accuracies, self.config.save_path, 'dev_acc_plot_', epoch + 1)
+                helper.save_plot(self.train_accuracies, self.config.output_base_path, 'training_acc_plot_', epoch + 1)
+                helper.save_plot(self.dev_accuracies, self.config.output_base_path, 'dev_acc_plot_', epoch + 1)
             else:
                 break
 
-    def train(self, train_corpus):
+    def train(self, train_corpus, epoch):
         # Turn on training mode which enables dropout.
         self.model.train()
 
         # Splitting the data in batches
-        train_batches = helper.batchify(train_corpus.data, self.config.batch_size)
+        shuffle = True
+        # if self.config.task == 'sst': shuffle = False
+        print(shuffle)
+
+        train_batches = helper.batchify(train_corpus.data, self.config.batch_size, shuffle)
         print('number of train batches = ', len(train_batches))
 
         start = time.time()
@@ -138,10 +164,13 @@ class Train:
 
             if loss.size(0) > 1:
                 loss = loss.mean()
+            # print ('loss:', loss)
             loss.backward()
 
             # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs.
-            clip_grad_norm(filter(lambda p: p.requires_grad, self.model.parameters()), self.config.max_norm)
+            grad_norm = clip_grad_norm(filter(lambda p: p.requires_grad, self.model.parameters()), self.config.max_norm)
+            # if epoch==11:
+            # print(batch_no, grad_norm)
             self.optimizer.step()
 
             print_acc_total += 100. * n_correct / len(train_batches[batch_no - 1])

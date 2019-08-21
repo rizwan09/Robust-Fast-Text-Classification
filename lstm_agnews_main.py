@@ -10,7 +10,7 @@
 import util, helper, data, os, sys, numpy, torch, pickle, json
 import imdb_train as train
 from torch import optim
-from model import BCN
+from lstm import LSTM
 from selector_model import Selector
 from torch.autograd import Variable
 
@@ -47,21 +47,17 @@ for task in task_names:
         # Load Learning to Skim paper's Pickle file
         ###############################################################################
         train_d, dev_d, test_d = helper.get_splited_imdb_data(args.output_base_path+task+'/'+'imdb.p', SAG = args.SAG)
-        
-        # train_corpus.parse(train_d, task, args.max_example)
-        #only for save selection on test set:
-        train_corpus.parse(test_d, task, args.max_example)
-
+        train_corpus.parse(train_d, task, args.max_example)
         dev_corpus.parse(dev_d, task, args.max_example)
         test_corpus.parse(test_d, task, args.max_example)
     else:
-        train_corpus.parse(args.data + task + '/test.txt', task, args.max_example)
+        train_corpus.parse(args.output_base_path + task + '/test.txt', task, args.max_example)
         if task == 'multinli':
-            dev_corpus.parse(args.data + task + '/dev_matched.txt', task, args.tokenize)
-            test_corpus.parse(args.data + task + '/test_matched.txt', task, args.tokenize)
+            dev_corpus.parse(args.output_base_path + task + '/dev_matched.txt', task, args.tokenize)
+            test_corpus.parse(args.output_base_path + task + '/test_matched.txt', task, args.tokenize)
         else:
-            dev_corpus.parse(args.data + task + '/dev.txt', task, args.tokenize)
-            test_corpus.parse(args.data + task + '/test.txt', task, args.tokenize)
+            dev_corpus.parse(args.output_base_path + task + '/dev.txt', task, args.tokenize)
+            test_corpus.parse(args.output_base_path + task + '/test.txt', task, args.tokenize)
 
 
 
@@ -76,13 +72,13 @@ if args.debug:
 
 
 
-print('train set size = ', len(train_corpus.data))
+print('train set size = ', len(train_corpus.data),)
 print('development set size = ', len(dev_corpus.data))
 print('test set size = ', len(test_corpus.data))
 
 
 # save the dictionary object to use during testing
-if os.path.exists(args.output_base_path + args.task+'/'+'dictionary.p'):
+if os.path.exists(args.output_base_path + args.task+'/'+ 'dictionary.p'):
     print('loading dictionary')
     dictionary = helper.load_object(args.output_base_path + args.task+'/'+ 'dictionary.p') 
 else:
@@ -101,7 +97,7 @@ print('number of OOV words = ', len(dictionary) - len(embeddings_index))
 # # Build the model
 # ###############################################################################
 
-model = BCN(dictionary, embeddings_index, args)
+model = LSTM(dictionary, embeddings_index, args)
 selector = Selector(dictionary, embeddings_index, args)
 
 print (selector)
@@ -139,7 +135,7 @@ if args.resume:
         selector.load_state_dict(checkpoint['selector'])
         model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
-        print("=> Both Selector and BCN classifier aare loaded checkpoint '{}' (epoch {})"
+        print("=> Both Selector and LSTM classifier aare loaded checkpoint '{}' (epoch {})"
               .format(args.resume, checkpoint['epoch']))
     else:
         print("=> no checkpoint found at '{}'".format(args.resume))

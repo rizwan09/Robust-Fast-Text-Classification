@@ -13,8 +13,8 @@ from model import BCN
 
 args = util.get_args()
 # if output directory doesn't exist, create it
-if not os.path.exists(args.save_path):
-    os.makedirs(args.save_path)
+if not os.path.exists(args.output_base_path):
+    os.makedirs(args.output_base_path)
 
 # Set the random seed manually for reproducibility.
 numpy.random.seed(args.seed)
@@ -43,18 +43,18 @@ for task in task_names:
         ###############################################################################
         # Load Learning to Skim paper's Pickle file
         ###############################################################################
-        train_d, dev_d, test_d = helper.get_splited_imdb_data(args.save_path+'data/'+'imdb.p')
+        train_d, dev_d, test_d = helper.get_splited_imdb_data(args.output_base_path+'data/'+'imdb.p')
         train_corpus.parse(train_d, task, args.max_example)
         dev_corpus.parse(dev_d, task, args.max_example)
         test_corpus.parse(test_d, task, args.max_example)
     else:
-        train_corpus.parse(args.data + task + '/train.txt', task, args.max_example)
+        train_corpus.parse(args.output_base_path + task + '/train.txt', task, args.max_example)
         if task == 'multinli':
-            dev_corpus.parse(args.data + task + '/dev_matched.txt', task, args.tokenize)
-            test_corpus.parse(args.data + task + '/test_matched.txt', task, args.tokenize)
+            dev_corpus.parse(args.output_base_path + task + '/dev_matched.txt', task, args.tokenize)
+            test_corpus.parse(args.output_base_path + task + '/test_matched.txt', task, args.tokenize)
         else:
-            dev_corpus.parse(args.data + task + '/dev.txt', task, args.tokenize)
-            test_corpus.parse(args.data + task + '/test.txt', task, args.tokenize)
+            dev_corpus.parse(args.output_base_path + task + '/dev.txt', task, args.tokenize)
+            test_corpus.parse(args.output_base_path + task + '/test.txt', task, args.tokenize)
 
 
 print('train set size = ', len(train_corpus.data))
@@ -63,15 +63,13 @@ print('test set size = ', len(test_corpus.data))
 
 
 # save the dictionary object to use during testing
-if os.path.exists(args.save_path + 'dictionary.p'):
+if os.path.exists(args.output_base_path + args.task+'/' +  'dictionary.p'):
     print('loading dictionary')
-    dictionary = helper.load_object(args.save_path + 'dictionary.p') 
+    dictionary = helper.load_object(args.output_base_path+ args.task+'/' + 'dictionary.p') 
 else:
     dictionary = data.Dictionary()
     dictionary.build_dict(train_corpus.data + dev_corpus.data + test_corpus.data, args.max_words)
-    helper.save_object(dictionary, args.save_path + 'dictionary.p')
-
-
+    helper.save_object(dictionary, args.output_base_path + args.task+'/' +  'dictionary.p')
     
 print('vocabulary size = ', len(dictionary))
 
@@ -107,7 +105,6 @@ if args.resume:
               .format(args.resume, checkpoint['epoch']))
     else:
         print("=> no checkpoint found at '{}'".format(args.resume))
-
 # ###############################################################################
 # # Train the model
 # ###############################################################################
